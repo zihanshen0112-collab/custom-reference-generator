@@ -94,7 +94,7 @@ h2 { font-size: 16px; margin: 0 0 14px; display: flex; align-items: center; gap:
 .indent-row { display: flex; align-items: center; gap: 16px; font-size: 14px; color: #374151; border-top: 1px solid #e5e7eb; padding-top: 14px; }
 .indent-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
-/* 新增：排版范例样式 */
+/* 排版范例样式优化 */
 .example-section {
   margin-top: 16px;
   background: #fffbeb;
@@ -114,8 +114,12 @@ h2 { font-size: 16px; margin: 0 0 14px; display: flex; align-items: center; gap:
   font-size: 14px;
   line-height: 1.6;
   color: #1f2937;
-  max-width: 100%;
-  word-wrap: break-word; /* 确保长文本强制换行，展示缩进效果 */
+  padding: 8px 12px; /* 增加内边距，让缩进对比更明显 */
+  background: #fff;
+  border: 1px solid #fef3c7;
+  border-radius: 4px;
+  min-height: 60px;
+  word-wrap: break-word; 
 }
 .preview-box p { margin: 0; }
 

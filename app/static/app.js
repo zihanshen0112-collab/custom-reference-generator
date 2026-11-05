@@ -11,10 +11,10 @@ const AVAILABLE_FIELDS = [
   { key: "container",  label: "Container" },
 ];
 
-// 用于在 Step 4 演示排版效果的 Mock 数据（故意写长以触发换行）
+// 更长的 Mock 数据，确保必定换行，让 Hanging 的视觉效果极强
 const EXAMPLE_METADATA = {
-  author: "Smith, John, and Jane Doe",
-  title: "The Comprehensive Guide to Citation Generation and Formatting Standards",
+  author: "Smith, John, and Jane Doe, and Robert Johnson",
+  title: "The Comprehensive Guide to Citation Generation and Formatting Standards in Modern Academic Writing",
   siteName: "International Journal of Reference Studies",
   publisher: "Academic Press",
   date: "2024-05-15",
@@ -44,7 +44,6 @@ const state = {
 let lastResult = { html: "", text: "" };
 const $ = (sel) => document.querySelector(sel);
 
-// 预设模板（加入了对应的缩进和分隔符设置）
 const PRESETS = {
   apa: {
     fields: [
@@ -157,6 +156,7 @@ function buildStyleEditor() {
     });
   }
 
+  // 同步单选按钮状态
   document.querySelectorAll('input[name="indent"]').forEach((radio) => {
     radio.checked = radio.value === state.style.indent;
     radio.addEventListener("change", () => {
@@ -188,7 +188,6 @@ function escapeHtml(s) {
   }[c]));
 }
 
-// 核心渲染函数
 function renderCitation(metadata, style) {
   const parts = [];
   const missing = [];
@@ -234,9 +233,7 @@ function renderCitation(metadata, style) {
   return { html: htmlOut, text: textOut, missing };
 }
 
-// 更新排版范例
 function renderExample() {
-  // 使用固定的长文本 Mock 数据，这样无论真实数据是否抓取到，都能看到排版和缩进效果
   const result = renderCitation(EXAMPLE_METADATA, state.style);
   const container = $("#format-example");
   
@@ -248,7 +245,6 @@ function renderExample() {
 }
 
 function render() {
-  // 1. 渲染真实预览
   const result = renderCitation(state.metadata, state.style);
   lastResult = { html: result.html, text: result.text };
 
@@ -267,7 +263,6 @@ function render() {
     hint.hidden = true;
   }
 
-  // 2. 渲染底部的范例
   renderExample();
 }
 
@@ -403,7 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.style.indent = PRESETS[val].indent;
       state.style.separator = PRESETS[val].separator;
       
-      // 同步 UI
+      // 核心：更新 UI 上的单选框状态
       $("#separator-input").value = state.style.separator;
       document.querySelectorAll('input[name="indent"]').forEach(radio => {
         radio.checked = radio.value === state.style.indent;
