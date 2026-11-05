@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RefGen</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -72,7 +72,10 @@
       <div id="style-editor" class="style-editor"></div>
       
       <div class="add-row">
-        <button id="add-element-btn" class="add-btn">+ Add element</button>
+        <!-- 将按钮替换为下拉菜单 -->
+        <select id="add-element-select" class="add-btn">
+          <option value="" disabled selected>+ Add element</option>
+        </select>
       </div>
 
       <div class="indent-row">
@@ -100,6 +103,6 @@
     </section>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

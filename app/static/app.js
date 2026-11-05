@@ -11,7 +11,6 @@ const AVAILABLE_FIELDS = [
   { key: "container",  label: "Container" },
 ];
 
-// 更长的 Mock 数据，确保必定换行，让 Hanging 的视觉效果极强
 const EXAMPLE_METADATA = {
   author: "Smith, John, and Jane Doe, and Robert Johnson",
   title: "The Comprehensive Guide to Citation Generation and Formatting Standards in Modern Academic Writing",
@@ -23,6 +22,19 @@ const EXAMPLE_METADATA = {
   container: "Journal of Citation Science"
 };
 
+// 唯一 ID 生成器，用于支持重复添加相同的 key
+let fieldIdCounter = 0;
+function createField(key) {
+  return {
+    id: ++fieldIdCounter,
+    key: key,
+    enabled: true,
+    bold: false,
+    italic: false,
+    enclosure: ""
+  };
+}
+
 const state = {
   metadata: { 
     author: "", title: "", siteName: "", publisher: "", 
@@ -30,11 +42,11 @@ const state = {
   },
   style: {
     fields: [
-      { key: "author",   enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "title",    enabled: true, bold: false, italic: true,  enclosure: '"' },
-      { key: "siteName", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "date",     enabled: true, bold: false, italic: false, enclosure: "()" },
-      { key: "url",      enabled: true, bold: false, italic: false, enclosure: "" },
+      createField("author"),
+      createField("title"),
+      createField("siteName"),
+      createField("date"),
+      createField("url")
     ],
     indent: "none",
     separator: ", ",
@@ -47,28 +59,33 @@ const $ = (sel) => document.querySelector(sel);
 const PRESETS = {
   apa: {
     fields: [
-      { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "date", enabled: true, bold: false, italic: false, enclosure: "()" },
-      { key: "title", enabled: true, bold: false, italic: true, enclosure: "" },
-      { key: "siteName", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
+      createField("author"),
+      createField("date"),
+      createField("title"),
+      createField("siteName"),
+      createField("url")
     ],
     indent: "hanging",
     separator: ". "
   },
   mla: {
     fields: [
-      { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "title", enabled: true, bold: false, italic: false, enclosure: '"' },
-      { key: "container", enabled: true, bold: false, italic: true, enclosure: "" },
-      { key: "publisher", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "date", enabled: true, bold: false, italic: false, enclosure: "" },
-      { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
+      createField("author"),
+      createField("title"),
+      createField("container"),
+      createField("publisher"),
+      createField("date"),
+      createField("url")
     ],
     indent: "hanging",
     separator: ". "
   }
 };
+
+// 手动调整 APA/MLA 预设中的特定样式（如将 title 设为斜体）
+PRESETS.apa.fields[2].italic = true;
+PRESETS.mla.fields[1].enclosure = '"';
+PRESETS.mla.fields[2].italic = true;
 
 /* ===================== 样式编辑器 ===================== */
 
@@ -78,13 +95,23 @@ function buildStyleEditor() {
   const container = $("#style-editor");
   container.innerHTML = "";
 
+  // 填充下拉菜单
+  const addSelect = $("#add-element-select");
+  addSelect.innerHTML = '<option value="" disabled selected>+ Add element</option>';
+  AVAILABLE_FIELDS.forEach(f => {
+    const opt = document.createElement("option");
+    opt.value = f.key;
+    opt.textContent = f.label;
+    addSelect.appendChild(opt);
+  });
+
   for (const f of state.style.fields) {
     const def = AVAILABLE_FIELDS.find((d) => d.key === f.key);
     if (!def) continue;
 
     const row = document.createElement("div");
     row.className = "style-row";
-    row.dataset.key = f.key;
+    row.dataset.id = f.id; // 使用唯一 ID 标识 DOM
 
     const drag = document.createElement("div");
     drag.className = "drag-handle";
@@ -129,7 +156,8 @@ function buildStyleEditor() {
     del.className = "delete-btn";
     del.textContent = "×";
     del.addEventListener("click", () => {
-      state.style.fields = state.style.fields.filter(item => item.key !== f.key);
+      // 根据唯一 ID 删除
+      state.style.fields = state.style.fields.filter(item => item.id !== f.id);
       buildStyleEditor();
       render();
     });
@@ -146,8 +174,8 @@ function buildStyleEditor() {
       onEnd: function () {
         const newOrder = [];
         container.querySelectorAll(".style-row").forEach(row => {
-          const key = row.dataset.key;
-          const field = state.style.fields.find(f => f.key === key);
+          const id = parseInt(row.dataset.id, 10);
+          const field = state.style.fields.find(f => f.id === id);
           if (field) newOrder.push(field);
         });
         state.style.fields = newOrder;
@@ -156,7 +184,6 @@ function buildStyleEditor() {
     });
   }
 
-  // 同步单选按钮状态
   document.querySelectorAll('input[name="indent"]').forEach((radio) => {
     radio.checked = radio.value === state.style.indent;
     radio.addEventListener("change", () => {
@@ -164,20 +191,6 @@ function buildStyleEditor() {
       render();
     });
   });
-}
-
-function addElement() {
-  const currentKeys = state.style.fields.map(f => f.key);
-  const remaining = AVAILABLE_FIELDS.filter(f => !currentKeys.includes(f.key));
-
-  if (remaining.length === 0) {
-    alert("All available elements have been added.");
-    return;
-  }
-
-  state.style.fields.push({ key: remaining[0].key, enabled: true, bold: false, italic: false, enclosure: "" });
-  buildStyleEditor();
-  render();
 }
 
 /* ===================== 渲染 ===================== */
@@ -221,7 +234,6 @@ function renderCitation(metadata, style) {
   let htmlOut = parts.map((p) => p.html).join(sep);
   const textOut = parts.map((p) => p.text).join(sep);
 
-  // 缩进样式
   if (style.indent === "hanging") {
     htmlOut = `<p style="padding-left:2em; text-indent:-2em;">${htmlOut}</p>`;
   } else if (style.indent === "first-line") {
@@ -391,14 +403,46 @@ document.addEventListener("DOMContentLoaded", () => {
   bindMetadataInputs();
   render();
 
+  // 监听下拉菜单的选择
+  $("#add-element-select").addEventListener("change", (e) => {
+    const key = e.target.value;
+    if (!key) return;
+
+    const existingCount = state.style.fields.filter(f => f.key === key).length;
+    
+    // 如果已经存在，提示用户确认
+    if (existingCount > 0) {
+      const label = AVAILABLE_FIELDS.find(f => f.key === key).label;
+      const confirmMsg = `"${label}" is already in the format. Do you want to add it again?`;
+      if (!confirm(confirmMsg)) {
+        e.target.value = ""; // 重置选择
+        return;
+      }
+    }
+
+    // 添加新元素
+    state.style.fields.push(createField(key));
+    buildStyleEditor();
+    render();
+    e.target.value = ""; // 重置选择状态
+  });
+
   $("#preset-select").addEventListener("change", (e) => {
     const val = e.target.value;
     if (PRESETS[val]) {
-      state.style.fields = JSON.parse(JSON.stringify(PRESETS[val].fields));
+      // 由于 PRESETS 中已经是深拷贝过的对象，这里直接重新生成唯一 ID
+      state.style.fields = PRESETS[val].fields.map(f => ({
+        id: ++fieldIdCounter,
+        key: f.key,
+        enabled: f.enabled,
+        bold: f.bold,
+        italic: f.italic,
+        enclosure: f.enclosure
+      }));
+      
       state.style.indent = PRESETS[val].indent;
       state.style.separator = PRESETS[val].separator;
       
-      // 核心：更新 UI 上的单选框状态
       $("#separator-input").value = state.style.separator;
       document.querySelectorAll('input[name="indent"]').forEach(radio => {
         radio.checked = radio.value === state.style.indent;
@@ -414,7 +458,6 @@ document.addEventListener("DOMContentLoaded", () => {
     render();
   });
 
-  $("#add-element-btn").addEventListener("click", addElement);
   $("#extract-btn").addEventListener("click", extract);
   $("#url-input").addEventListener("keydown", (e) => { if (e.key === "Enter") extract(); });
   $("#parse-btn").addEventListener("click", parsePastedCitation);
