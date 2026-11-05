@@ -22,17 +22,9 @@ const EXAMPLE_METADATA = {
   container: "Journal of Citation Science"
 };
 
-// 唯一 ID 生成器，用于支持重复添加相同的 key
 let fieldIdCounter = 0;
 function createField(key) {
-  return {
-    id: ++fieldIdCounter,
-    key: key,
-    enabled: true,
-    bold: false,
-    italic: false,
-    enclosure: ""
-  };
+  return { id: ++fieldIdCounter, key: key, enabled: true, bold: false, italic: false, enclosure: "" };
 }
 
 const state = {
@@ -42,50 +34,101 @@ const state = {
   },
   style: {
     fields: [
-      createField("author"),
-      createField("title"),
-      createField("siteName"),
-      createField("date"),
-      createField("url")
+      createField("author"), createField("title"), createField("siteName"), createField("date"), createField("url")
     ],
     indent: "none",
     separator: ", ",
   },
 };
 
-let lastResult = { html: "", text: "" };
+let lastResult = { html: "", text: "", blockquoteHtml: "", blockquoteText: "", intext: "" };
 const $ = (sel) => document.querySelector(sel);
 
 const PRESETS = {
   apa: {
     fields: [
-      createField("author"),
-      createField("date"),
-      createField("title"),
-      createField("siteName"),
-      createField("url")
+      createField("author"), createField("date"), createField("title"), createField("siteName"), createField("url")
     ],
     indent: "hanging",
     separator: ". "
   },
   mla: {
     fields: [
-      createField("author"),
-      createField("title"),
-      createField("container"),
-      createField("publisher"),
-      createField("date"),
-      createField("url")
+      createField("author"), createField("title"), createField("container"), createField("publisher"), createField("date"), createField("url")
     ],
     indent: "hanging",
     separator: ". "
   }
 };
 
-// 手动调整 APA/MLA 预设中的特定样式（如将 title 设为斜体）
 PRESETS.apa.fields[2].italic = true;
 PRESETS.mla.fields[1].enclosure = '"';
 PRESETS.mla.fields[2].italic = true;
+
+/* ===================== In-text Citation 逻辑 ===================== */
+
+// 从任意日期字符串中提取 4 位年份
+function extractYear(dateStr) {
+  if (!dateStr) return "n.d.";
+  const match = dateStr.match(/\b(19|20)\d{2}\b/);
+  return match ? match[0] : "n.d.";
+}
+
+// 提取作者姓氏，并处理 1、2、3+ 作者逻辑
+function formatInTextAuthor(authorStr) {
+  if (!authorStr) return "Unknown";
+  
+  // 简单的分割逻辑，兼容 "and", "&", ";" 以及多个逗号
+  let parts = authorStr.split(/,|\band\b|&/i).map(s => s.trim()).filter(Boolean);
+  
+  // 清洗掉多余的头衔或连词
+  parts = parts.filter(p => !/^(and|&)$/i.test(p));
+
+  if (parts.length === 0) return "Unknown";
+
+  // 提取姓氏的辅助函数
+  const getLastName = (name) => {
+    if (!name) return "";
+    // 如果有逗号（格式通常是 "Last, First"），但前面已经按逗号切割了，所以这里大多处理 "First Last"
+    const words = name.split(/\s+/);
+    return words[words.length - 1]; 
+  };
+
+  // 如果原字符串带有逗号，例如 "Smith, John, and Jane Doe"，第一个词可能就是姓氏
+  let firstLastName = parts[0].includes(" ") ? getLastName(parts[0]) : parts[0];
+
+  // 统计有效作者数量（如果是 APA，3人及以上用 et al.）
+  const isEtAl = parts.length >= 3 || authorStr.includes("et al");
+  
+  if (isEtAl) {
+    return `${firstLastName} et al.`;
+  } else if (parts.length === 2) {
+    const secondLastName = parts[1].includes(" ") ? getLastName(parts[1]) : parts[1];
+    return `${firstLastName} & ${secondLastName}`;
+  } else {
+    return firstLastName;
+  }
+}
+
+// 生成 In-text citation
+function renderInTextCitation() {
+  const author = state.metadata.author;
+  const date = state.metadata.date;
+  
+  const container = $("#intext-preview");
+  if (!author && !date) {
+    container.innerHTML = '<span class="placeholder">(Author, Year)</span>';
+    lastResult.intext = "";
+    return;
+  }
+
+  const formattedAuthor = formatInTextAuthor(author);
+  const formattedYear = extractYear(date);
+  
+  const text = `(${formattedAuthor}, ${formattedYear})`;
+  container.textContent = text;
+  lastResult.intext = text;
+}
 
 /* ===================== 样式编辑器 ===================== */
 
@@ -95,7 +138,6 @@ function buildStyleEditor() {
   const container = $("#style-editor");
   container.innerHTML = "";
 
-  // 填充下拉菜单
   const addSelect = $("#add-element-select");
   addSelect.innerHTML = '<option value="" disabled selected>+ Add element</option>';
   AVAILABLE_FIELDS.forEach(f => {
@@ -111,7 +153,7 @@ function buildStyleEditor() {
 
     const row = document.createElement("div");
     row.className = "style-row";
-    row.dataset.id = f.id; // 使用唯一 ID 标识 DOM
+    row.dataset.id = f.id;
 
     const drag = document.createElement("div");
     drag.className = "drag-handle";
@@ -156,7 +198,6 @@ function buildStyleEditor() {
     del.className = "delete-btn";
     del.textContent = "×";
     del.addEventListener("click", () => {
-      // 根据唯一 ID 删除
       state.style.fields = state.style.fields.filter(item => item.id !== f.id);
       buildStyleEditor();
       render();
@@ -257,8 +298,16 @@ function renderExample() {
 }
 
 function render() {
+  // 1. 渲染全文本引用
   const result = renderCitation(state.metadata, state.style);
-  lastResult = { html: result.html, text: result.text };
+  
+  const indentedText = result.text.split('\n').map(line => "    " + line).join('\n');
+  const indentedHtml = `<blockquote style="margin: 1em 40px; padding-left: 10px; border-left: 3px solid #ccc;">${result.html}</blockquote>`;
+  
+  lastResult.html = result.html;
+  lastResult.text = result.text;
+  lastResult.blockquoteHtml = indentedHtml;
+  lastResult.blockquoteText = indentedText;
 
   const preview = $("#preview");
   if (result.text) {
@@ -275,6 +324,10 @@ function render() {
     hint.hidden = true;
   }
 
+  // 2. 渲染 In-text Citation
+  renderInTextCitation();
+
+  // 3. 渲染范例
   renderExample();
 }
 
@@ -295,6 +348,15 @@ function refreshMetadataInputs() {
   });
 }
 
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 35000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, { ...options, signal: controller.signal });
+  clearTimeout(id);
+  return response;
+}
+
 async function extract() {
   const url = $("#url-input").value.trim();
   if (!url) return;
@@ -306,11 +368,14 @@ async function extract() {
   status.className = "status loading";
 
   try {
-    const resp = await fetch("/api/extract", {
+    const resp = await fetchWithTimeout("/api/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     });
+    
+    if (!resp.ok) throw new Error("Server returned " + resp.status);
+    
     const data = await resp.json();
 
     if (data.error) {
@@ -329,7 +394,11 @@ async function extract() {
     refreshMetadataInputs();
     render();
   } catch (err) {
-    status.textContent = "Request failed: " + err.message;
+    if (err.name === 'AbortError') {
+      status.textContent = "Failed: Request timed out (35s). The site might be blocking access.";
+    } else {
+      status.textContent = "Request failed: " + err.message;
+    }
     status.className = "status error";
   } finally {
     btn.disabled = false;
@@ -380,6 +449,8 @@ async function parsePastedCitation() {
   }
 }
 
+/* ===================== 复制功能 ===================== */
+
 async function copyCitation() {
   const { html, text } = lastResult;
   if (!text) return;
@@ -390,9 +461,35 @@ async function copyCitation() {
   } catch {
     await navigator.clipboard.writeText(text);
   }
-  const btn = $("#copy-btn");
+  flashBtn($("#copy-btn"), "Copied.");
+}
+
+async function copyAsBlockquote() {
+  const { blockquoteHtml, blockquoteText } = lastResult;
+  if (!blockquoteText) return;
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({ 
+        "text/html": new Blob([blockquoteHtml], { type: "text/html" }), 
+        "text/plain": new Blob([blockquoteText], { type: "text/plain" }) 
+      }),
+    ]);
+  } catch {
+    await navigator.clipboard.writeText(blockquoteText);
+  }
+  flashBtn($("#copy-blockquote-btn"), "Copied!");
+}
+
+async function copyInTextCitation() {
+  const { intext } = lastResult;
+  if (!intext) return;
+  await navigator.clipboard.writeText(intext);
+  flashBtn($("#copy-intext-btn"), "Copied!");
+}
+
+function flashBtn(btn, msg) {
   const old = btn.textContent;
-  btn.textContent = "Copied.";
+  btn.textContent = msg;
   setTimeout(() => (btn.textContent = old), 1500);
 }
 
@@ -403,41 +500,30 @@ document.addEventListener("DOMContentLoaded", () => {
   bindMetadataInputs();
   render();
 
-  // 监听下拉菜单的选择
   $("#add-element-select").addEventListener("change", (e) => {
     const key = e.target.value;
     if (!key) return;
 
     const existingCount = state.style.fields.filter(f => f.key === key).length;
-    
-    // 如果已经存在，提示用户确认
     if (existingCount > 0) {
       const label = AVAILABLE_FIELDS.find(f => f.key === key).label;
-      const confirmMsg = `"${label}" is already in the format. Do you want to add it again?`;
-      if (!confirm(confirmMsg)) {
-        e.target.value = ""; // 重置选择
+      if (!confirm(`"${label}" is already in the format. Do you want to add it again?`)) {
+        e.target.value = ""; 
         return;
       }
     }
 
-    // 添加新元素
     state.style.fields.push(createField(key));
     buildStyleEditor();
     render();
-    e.target.value = ""; // 重置选择状态
+    e.target.value = ""; 
   });
 
   $("#preset-select").addEventListener("change", (e) => {
     const val = e.target.value;
     if (PRESETS[val]) {
-      // 由于 PRESETS 中已经是深拷贝过的对象，这里直接重新生成唯一 ID
       state.style.fields = PRESETS[val].fields.map(f => ({
-        id: ++fieldIdCounter,
-        key: f.key,
-        enabled: f.enabled,
-        bold: f.bold,
-        italic: f.italic,
-        enclosure: f.enclosure
+        id: ++fieldIdCounter, key: f.key, enabled: f.enabled, bold: f.bold, italic: f.italic, enclosure: f.enclosure
       }));
       
       state.style.indent = PRESETS[val].indent;
@@ -461,5 +547,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#extract-btn").addEventListener("click", extract);
   $("#url-input").addEventListener("keydown", (e) => { if (e.key === "Enter") extract(); });
   $("#parse-btn").addEventListener("click", parsePastedCitation);
+  
   $("#copy-btn").addEventListener("click", copyCitation);
+  $("#copy-blockquote-btn").addEventListener("click", copyAsBlockquote);
+  $("#copy-intext-btn").addEventListener("click", copyInTextCitation);
 });

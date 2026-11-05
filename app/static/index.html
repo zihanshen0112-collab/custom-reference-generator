@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RefGen</title>
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=6" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -68,11 +68,9 @@
         <input type="text" id="separator-input" value=", " maxlength="5" />
       </div>
 
-      <!-- Sortable 拖拽区域 -->
       <div id="style-editor" class="style-editor"></div>
       
       <div class="add-row">
-        <!-- 将按钮替换为下拉菜单 -->
         <select id="add-element-select" class="add-btn">
           <option value="" disabled selected>+ Add element</option>
         </select>
@@ -85,7 +83,6 @@
         <label><input type="radio" name="indent" value="first-line" /> First line</label>
       </div>
 
-      <!-- 新增：排版范例预览区 -->
       <div class="example-section">
         <div class="example-title">Format Example (Mock Data)</div>
         <div id="format-example" class="preview-box"></div>
@@ -95,14 +92,31 @@
     <!-- Step 5: Preview -->
     <section class="panel">
       <h2><span class="step">5</span>Final Preview</h2>
+      
+      <!-- 新增 In-text Citation 区域 -->
+      <div class="intext-section">
+        <div class="intext-header">
+          <span>In-text Citation</span>
+          <button id="copy-intext-btn" class="btn-small">Copy</button>
+        </div>
+        <div id="intext-preview" class="intext-preview">
+          <span class="placeholder">(Author, Year)</span>
+        </div>
+      </div>
+
+      <div class="reference-header">Full Reference</div>
       <div id="preview" class="preview">
         <span class="placeholder">Your citation will appear here.</span>
       </div>
       <div id="missing-hint" class="missing-hint" hidden></div>
-      <button id="copy-btn" class="copy-btn">Copy citation</button>
+      
+      <div class="copy-actions">
+        <button id="copy-btn" class="copy-btn">Copy Reference</button>
+        <button id="copy-blockquote-btn" class="copy-btn btn-indent">Copy as Blockquote</button>
+      </div>
     </section>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
