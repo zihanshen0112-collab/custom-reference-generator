@@ -11,6 +11,18 @@ const AVAILABLE_FIELDS = [
   { key: "container",  label: "Container" },
 ];
 
+// 用于在 Step 4 演示排版效果的 Mock 数据（故意写长以触发换行）
+const EXAMPLE_METADATA = {
+  author: "Smith, John, and Jane Doe",
+  title: "The Comprehensive Guide to Citation Generation and Formatting Standards",
+  siteName: "International Journal of Reference Studies",
+  publisher: "Academic Press",
+  date: "2024-05-15",
+  accessDate: "2026-11-04",
+  url: "https://example.com/journal/article/12345",
+  container: "Journal of Citation Science"
+};
+
 const state = {
   metadata: { 
     author: "", title: "", siteName: "", publisher: "", 
@@ -32,22 +44,31 @@ const state = {
 let lastResult = { html: "", text: "" };
 const $ = (sel) => document.querySelector(sel);
 
+// 预设模板（加入了对应的缩进和分隔符设置）
 const PRESETS = {
-  apa: [
-    { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
-    { key: "date", enabled: true, bold: false, italic: false, enclosure: "()" },
-    { key: "title", enabled: true, bold: false, italic: true, enclosure: "" },
-    { key: "siteName", enabled: true, bold: false, italic: false, enclosure: "" },
-    { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
-  ],
-  mla: [
-    { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
-    { key: "title", enabled: true, bold: false, italic: false, enclosure: '"' },
-    { key: "container", enabled: true, bold: false, italic: true, enclosure: "" },
-    { key: "publisher", enabled: true, bold: false, italic: false, enclosure: "" },
-    { key: "date", enabled: true, bold: false, italic: false, enclosure: "" },
-    { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
-  ]
+  apa: {
+    fields: [
+      { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
+      { key: "date", enabled: true, bold: false, italic: false, enclosure: "()" },
+      { key: "title", enabled: true, bold: false, italic: true, enclosure: "" },
+      { key: "siteName", enabled: true, bold: false, italic: false, enclosure: "" },
+      { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
+    ],
+    indent: "hanging",
+    separator: ". "
+  },
+  mla: {
+    fields: [
+      { key: "author", enabled: true, bold: false, italic: false, enclosure: "" },
+      { key: "title", enabled: true, bold: false, italic: false, enclosure: '"' },
+      { key: "container", enabled: true, bold: false, italic: true, enclosure: "" },
+      { key: "publisher", enabled: true, bold: false, italic: false, enclosure: "" },
+      { key: "date", enabled: true, bold: false, italic: false, enclosure: "" },
+      { key: "url", enabled: true, bold: false, italic: false, enclosure: "" },
+    ],
+    indent: "hanging",
+    separator: ". "
+  }
 };
 
 /* ===================== 样式编辑器 ===================== */
@@ -77,7 +98,6 @@ function buildStyleEditor() {
     const enabled = document.createElement("input");
     enabled.type = "checkbox";
     enabled.checked = f.enabled;
-    enabled.title = "Include this field";
     enabled.addEventListener("change", () => { f.enabled = enabled.checked; render(); });
 
     const bold = document.createElement("button");
@@ -109,7 +129,6 @@ function buildStyleEditor() {
     del.type = "button";
     del.className = "delete-btn";
     del.textContent = "×";
-    del.title = "Remove this field";
     del.addEventListener("click", () => {
       state.style.fields = state.style.fields.filter(item => item.key !== f.key);
       buildStyleEditor();
@@ -120,7 +139,6 @@ function buildStyleEditor() {
     container.appendChild(row);
   }
 
-  // 安全检查：如果 Sortable 没加载出来（比如国内 CDN 被墙），跳过拖拽，不报错阻断页面
   if (typeof Sortable !== "undefined") {
     if (sortableInstance) sortableInstance.destroy();
     sortableInstance = new Sortable(container, {
@@ -137,9 +155,6 @@ function buildStyleEditor() {
         render();
       }
     });
-  } else {
-    console.warn("SortableJS failed to load. Drag-and-drop disabled.");
-    container.querySelectorAll(".drag-handle").forEach(h => h.style.display = "none");
   }
 
   document.querySelectorAll('input[name="indent"]').forEach((radio) => {
@@ -160,7 +175,6 @@ function addElement() {
     return;
   }
 
-  // 自动添加第一个未使用的字段
   state.style.fields.push({ key: remaining[0].key, enabled: true, bold: false, italic: false, enclosure: "" });
   buildStyleEditor();
   render();
@@ -174,6 +188,7 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// 核心渲染函数
 function renderCitation(metadata, style) {
   const parts = [];
   const missing = [];
@@ -203,10 +218,11 @@ function renderCitation(metadata, style) {
     parts.push({ html, text });
   }
 
-  const sep = style.separator || ", ";
+  const sep = style.separator !== undefined ? style.separator : ", ";
   let htmlOut = parts.map((p) => p.html).join(sep);
   const textOut = parts.map((p) => p.text).join(sep);
 
+  // 缩进样式
   if (style.indent === "hanging") {
     htmlOut = `<p style="padding-left:2em; text-indent:-2em;">${htmlOut}</p>`;
   } else if (style.indent === "first-line") {
@@ -218,7 +234,21 @@ function renderCitation(metadata, style) {
   return { html: htmlOut, text: textOut, missing };
 }
 
+// 更新排版范例
+function renderExample() {
+  // 使用固定的长文本 Mock 数据，这样无论真实数据是否抓取到，都能看到排版和缩进效果
+  const result = renderCitation(EXAMPLE_METADATA, state.style);
+  const container = $("#format-example");
+  
+  if (result.text) {
+    container.innerHTML = result.html;
+  } else {
+    container.innerHTML = '<span style="color:#9ca3af;font-style:italic;">All fields are disabled. Enable some to see the example.</span>';
+  }
+}
+
 function render() {
+  // 1. 渲染真实预览
   const result = renderCitation(state.metadata, state.style);
   lastResult = { html: result.html, text: result.text };
 
@@ -236,6 +266,9 @@ function render() {
   } else {
     hint.hidden = true;
   }
+
+  // 2. 渲染底部的范例
+  renderExample();
 }
 
 /* ===================== 数据绑定与 API ===================== */
@@ -365,8 +398,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("#preset-select").addEventListener("change", (e) => {
     const val = e.target.value;
-    if (val === "apa" || val === "mla") {
-      state.style.fields = JSON.parse(JSON.stringify(PRESETS[val]));
+    if (PRESETS[val]) {
+      state.style.fields = JSON.parse(JSON.stringify(PRESETS[val].fields));
+      state.style.indent = PRESETS[val].indent;
+      state.style.separator = PRESETS[val].separator;
+      
+      // 同步 UI
+      $("#separator-input").value = state.style.separator;
+      document.querySelectorAll('input[name="indent"]').forEach(radio => {
+        radio.checked = radio.value === state.style.indent;
+      });
+
       buildStyleEditor();
       render();
     }
