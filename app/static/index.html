@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RefGen</title>
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
@@ -93,18 +93,17 @@
     <section class="panel">
       <h2><span class="step">5</span>Final Preview</h2>
       
-      <!-- 新增 In-text Citation 区域 -->
-      <div class="intext-section">
-        <div class="intext-header">
-          <span>In-text Citation</span>
-          <button id="copy-intext-btn" class="btn-small">Copy</button>
-        </div>
-        <div id="intext-preview" class="intext-preview">
-          <span class="placeholder">(Author, Year)</span>
-        </div>
+      <!-- In-text Citation 区域 -->
+      <div class="reference-header">IN-TEXT CITATION</div>
+      <div id="intext-preview" class="preview">
+        <span class="placeholder">(Author, Year)</span>
+      </div>
+      <div class="copy-actions" style="margin-bottom: 24px;">
+        <button id="copy-intext-btn" class="copy-btn">Copy In-text Citation</button>
       </div>
 
-      <div class="reference-header">Full Reference</div>
+      <!-- Full Reference 区域 -->
+      <div class="reference-header">FULL REFERENCE</div>
       <div id="preview" class="preview">
         <span class="placeholder">Your citation will appear here.</span>
       </div>
@@ -112,11 +111,10 @@
       
       <div class="copy-actions">
         <button id="copy-btn" class="copy-btn">Copy Reference</button>
-        <button id="copy-blockquote-btn" class="copy-btn btn-indent">Copy as Blockquote</button>
       </div>
     </section>
   </div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

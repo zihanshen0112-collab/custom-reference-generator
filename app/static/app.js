@@ -41,7 +41,7 @@ const state = {
   },
 };
 
-let lastResult = { html: "", text: "", blockquoteHtml: "", blockquoteText: "", intext: "" };
+let lastResult = { html: "", text: "", intext: "" };
 const $ = (sel) => document.querySelector(sel);
 
 const PRESETS = {
@@ -67,37 +67,27 @@ PRESETS.mla.fields[2].italic = true;
 
 /* ===================== In-text Citation 逻辑 ===================== */
 
-// 从任意日期字符串中提取 4 位年份
 function extractYear(dateStr) {
   if (!dateStr) return "n.d.";
   const match = dateStr.match(/\b(19|20)\d{2}\b/);
   return match ? match[0] : "n.d.";
 }
 
-// 提取作者姓氏，并处理 1、2、3+ 作者逻辑
 function formatInTextAuthor(authorStr) {
   if (!authorStr) return "Unknown";
   
-  // 简单的分割逻辑，兼容 "and", "&", ";" 以及多个逗号
   let parts = authorStr.split(/,|\band\b|&/i).map(s => s.trim()).filter(Boolean);
-  
-  // 清洗掉多余的头衔或连词
   parts = parts.filter(p => !/^(and|&)$/i.test(p));
 
   if (parts.length === 0) return "Unknown";
 
-  // 提取姓氏的辅助函数
   const getLastName = (name) => {
     if (!name) return "";
-    // 如果有逗号（格式通常是 "Last, First"），但前面已经按逗号切割了，所以这里大多处理 "First Last"
     const words = name.split(/\s+/);
     return words[words.length - 1]; 
   };
 
-  // 如果原字符串带有逗号，例如 "Smith, John, and Jane Doe"，第一个词可能就是姓氏
   let firstLastName = parts[0].includes(" ") ? getLastName(parts[0]) : parts[0];
-
-  // 统计有效作者数量（如果是 APA，3人及以上用 et al.）
   const isEtAl = parts.length >= 3 || authorStr.includes("et al");
   
   if (isEtAl) {
@@ -110,7 +100,6 @@ function formatInTextAuthor(authorStr) {
   }
 }
 
-// 生成 In-text citation
 function renderInTextCitation() {
   const author = state.metadata.author;
   const date = state.metadata.date;
@@ -300,14 +289,8 @@ function renderExample() {
 function render() {
   // 1. 渲染全文本引用
   const result = renderCitation(state.metadata, state.style);
-  
-  const indentedText = result.text.split('\n').map(line => "    " + line).join('\n');
-  const indentedHtml = `<blockquote style="margin: 1em 40px; padding-left: 10px; border-left: 3px solid #ccc;">${result.html}</blockquote>`;
-  
   lastResult.html = result.html;
   lastResult.text = result.text;
-  lastResult.blockquoteHtml = indentedHtml;
-  lastResult.blockquoteText = indentedText;
 
   const preview = $("#preview");
   if (result.text) {
@@ -349,7 +332,7 @@ function refreshMetadataInputs() {
 }
 
 async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 35000 } = options;
+  const { timeout = 20000 } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(resource, { ...options, signal: controller.signal });
@@ -395,7 +378,7 @@ async function extract() {
     render();
   } catch (err) {
     if (err.name === 'AbortError') {
-      status.textContent = "Failed: Request timed out (35s). The site might be blocking access.";
+      status.textContent = "Failed: Request timed out (20s). The site might be blocking access.";
     } else {
       status.textContent = "Request failed: " + err.message;
     }
@@ -462,22 +445,6 @@ async function copyCitation() {
     await navigator.clipboard.writeText(text);
   }
   flashBtn($("#copy-btn"), "Copied.");
-}
-
-async function copyAsBlockquote() {
-  const { blockquoteHtml, blockquoteText } = lastResult;
-  if (!blockquoteText) return;
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({ 
-        "text/html": new Blob([blockquoteHtml], { type: "text/html" }), 
-        "text/plain": new Blob([blockquoteText], { type: "text/plain" }) 
-      }),
-    ]);
-  } catch {
-    await navigator.clipboard.writeText(blockquoteText);
-  }
-  flashBtn($("#copy-blockquote-btn"), "Copied!");
 }
 
 async function copyInTextCitation() {
@@ -549,6 +516,5 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#parse-btn").addEventListener("click", parsePastedCitation);
   
   $("#copy-btn").addEventListener("click", copyCitation);
-  $("#copy-blockquote-btn").addEventListener("click", copyAsBlockquote);
   $("#copy-intext-btn").addEventListener("click", copyInTextCitation);
 });

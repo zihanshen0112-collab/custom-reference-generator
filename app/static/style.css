@@ -126,42 +126,7 @@ select.add-btn:hover { background: #e5e7eb; }
 }
 .preview-box p { margin: 0; }
 
-/* 新增 In-text Citation 区域样式 */
-.intext-section {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-}
-.intext-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #166534;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.intext-preview {
-  font-size: 15px;
-  color: #1f2937;
-  font-weight: 500;
-  padding: 4px 0;
-}
-.btn-small {
-  padding: 4px 10px;
-  background: #22c55e;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.btn-small:hover { background: #16a34a; }
-
+/* 统一的预览框和标题样式 */
 .reference-header {
   font-size: 12px;
   font-weight: 600;
@@ -170,10 +135,15 @@ select.add-btn:hover { background: #e5e7eb; }
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .preview {
-  padding: 16px 18px; background: #f9fafb; border: 1px dashed #d1d5db;
-  border-radius: 8px; font-size: 15px; min-height: 60px; word-break: break-word; line-height: 1.8;
+  padding: 16px 18px; 
+  background: #f9fafb; 
+  border: 1px dashed #d1d5db;
+  border-radius: 8px; 
+  font-size: 15px; 
+  min-height: 60px; 
+  word-break: break-word; 
+  line-height: 1.8;
 }
 .preview p { margin: 0; }
 .preview .placeholder { color: #9ca3af; font-style: italic; }
@@ -192,8 +162,6 @@ select.add-btn:hover { background: #e5e7eb; }
   font-weight: 500; 
 }
 .copy-btn:hover { background: #059669; }
-.btn-indent { background: #6366f1; }
-.btn-indent:hover { background: #4f46e5; }
 
 @media (max-width: 700px) {
   .meta-grid { grid-template-columns: 1fr; }
